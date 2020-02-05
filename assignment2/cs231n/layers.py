@@ -174,16 +174,17 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # the momentum variable to update the running mean and running variance,    #
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
-    sample_mean = np.mean(x, axis=0)
-    sample_var = np.var(x, axis = 0)
+    sample_mean = 1./N * np.sum(x, axis = 0)
     xmu = (x - sample_mean)
-    sqrtvar = np.sqrt(sample_var + eps)
-    ivar = 1 / sqrtvar
+    sq = xmu ** 2
+    var = 1./N * np.sum(sq, axis = 0)
+    sqrtvar = np.sqrt(var + eps)
+    ivar = 1. / sqrtvar
     x_hat = xmu * ivar
     out = x_hat * gamma + beta
     running_mean = momentum * running_mean + (1 - momentum) * sample_mean
-    running_var = momentum * running_var + (1 - momentum) * sample_var
-    cache = (x_hat,gamma,xmu,ivar,sqrtvar,sample_var,eps)
+    running_var = momentum * running_var + (1 - momentum) * var
+    cache = (x_hat,gamma,xmu,ivar,sqrtvar,var,eps)
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -210,33 +211,48 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
 
 def batchnorm_backward(dout, cache):
-  """
-  Backward pass for batch normalization.
-  
-  For this implementation, you should write out a computation graph for
-  batch normalization on paper and propagate gradients backward through
-  intermediate nodes.
-  
-  Inputs:
-  - dout: Upstream derivatives, of shape (N, D)
-  - cache: Variable of intermediates from batchnorm_forward.
-  
-  Returns a tuple of:
-  - dx: Gradient with respect to inputs x, of shape (N, D)
-  - dgamma: Gradient with respect to scale parameter gamma, of shape (D,)
-  - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
-  """
-  dx, dgamma, dbeta = None, None, None
-  #############################################################################
-  # TODO: Implement the backward pass for batch normalization. Store the      #
-  # results in the dx, dgamma, and dbeta variables.                           #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+    """
+    Backward pass for batch normalization.
 
-  return dx, dgamma, dbeta
+    For this implementation, you should write out a computation graph for
+    batch normalization on paper and propagate gradients backward through
+    intermediate nodes.
+
+    Inputs:
+    - dout: Upstream derivatives, of shape (N, D)
+    - cache: Variable of intermediates from batchnorm_forward.
+
+    Returns a tuple of:
+    - dx: Gradient with respect to inputs x, of shape (N, D)
+    - dgamma: Gradient with respect to scale parameter gamma, of shape (D,)
+    - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
+    """
+    dx, dgamma, dbeta = None, None, None
+    #############################################################################
+    # TODO: Implement the backward pass for batch normalization. Store the      #
+    # results in the dx, dgamma, and dbeta variables.                           #
+    #############################################################################
+    N, D = dout.shape
+    xhat,gamma,xmu,ivar,sqrtvar,var,eps = cache
+    dbeta = np.sum(dout, axis = 0)
+    dgamma = np.sum(dout * xhat, axis = 0)
+    dxhat = dout * gamma
+    divar = np.sum(dxhat * xmu, axis = 0) 
+    dxmu = dxhat * ivar
+    dsqrtvar = -1  / (sqrtvar ** 2) * divar
+    dvar = 0.5 * 1/np.sqrt(var + eps) * dsqrtvar
+    dsq = (1. /N) * np.ones((N,D)) * dvar
+    dxmu2 = 2 * xmu * dsq
+    dx1 = (dxmu + dxmu2)
+    dmu = -1 * np.sum(dxmu + dxmu2, axis = 0)
+    dx2 = 1. /N * np.ones((N,D)) * dmu
+
+    dx = dx1 + dx2
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+
+    return dx, dgamma, dbeta
 
 
 def batchnorm_backward_alt(dout, cache):
@@ -300,7 +316,8 @@ def dropout_forward(x, dropout_param):
     # TODO: Implement the training phase forward pass for inverted dropout.   #
     # Store the dropout mask in the mask variable.                            #
     ###########################################################################
-    pass
+    mask = (np.random.rand(x.shape[0],x.shape[1]) < (1-p)) / (1-p)
+    out = mask * x
     ###########################################################################
     #                            END OF YOUR CODE                             #
     ###########################################################################
@@ -308,7 +325,7 @@ def dropout_forward(x, dropout_param):
     ###########################################################################
     # TODO: Implement the test phase forward pass for inverted dropout.       #
     ###########################################################################
-    pass
+    out = x
     ###########################################################################
     #                            END OF YOUR CODE                             #
     ###########################################################################
@@ -335,7 +352,7 @@ def dropout_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the training phase backward pass for inverted dropout.  #
     ###########################################################################
-    pass
+    dx = mask * dout
     ###########################################################################
     #                            END OF YOUR CODE                             #
     ###########################################################################
