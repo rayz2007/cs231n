@@ -362,63 +362,116 @@ def dropout_backward(dout, cache):
 
 
 def conv_forward_naive(x, w, b, conv_param):
-  """
-  A naive implementation of the forward pass for a convolutional layer.
+    """
+    A naive implementation of the forward pass for a convolutional layer.
 
-  The input consists of N data points, each with C channels, height H and width
-  W. We convolve each input with F different filters, where each filter spans
-  all C channels and has height HH and width HH.
+    The input consists of N data points, each with C channels, height H and width
+    W. We convolve each input with F different filters, where each filter spans
+    all C channels and has height HH and width HH.
 
-  Input:
-  - x: Input data of shape (N, C, H, W)
-  - w: Filter weights of shape (F, C, HH, WW)
-  - b: Biases, of shape (F,)
-  - conv_param: A dictionary with the following keys:
+    Input:
+    - x: Input data of shape (N, C, H, W)
+    - w: Filter weights of shape (F, C, HH, WW)
+    - b: Biases, of shape (F,)
+    - conv_param: A dictionary with the following keys:
     - 'stride': The number of pixels between adjacent receptive fields in the
       horizontal and vertical directions.
     - 'pad': The number of pixels that will be used to zero-pad the input.
 
-  Returns a tuple of:
-  - out: Output data, of shape (N, F, H', W') where H' and W' are given by
+    Returns a tuple of:
+    - out: Output data, of shape (N, F, H', W') where H' and W' are given by
     H' = 1 + (H + 2 * pad - HH) / stride
     W' = 1 + (W + 2 * pad - WW) / stride
-  - cache: (x, w, b, conv_param)
-  """
-  out = None
-  #############################################################################
-  # TODO: Implement the convolutional forward pass.                           #
-  # Hint: you can use the function np.pad for padding.                        #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
-  cache = (x, w, b, conv_param)
-  return out, cache
+    - cache: (x, w, b, conv_param)
+    """
+    out = None
+    #############################################################################
+    # TODO: Implement the convolutional forward pass.                           #
+    # Hint: you can use the function np.pad for padding.                        #
+    #############################################################################
+    N, C, H, W = x.shape
+    F,_, HH, WW = w.shape
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    newH = 1 + (H + 2 * pad - HH) / stride
+    newW = 1 + (W + 2 * pad - WW) / stride
+    
+    out = np.zeros((N,F,newH,newW)) 
+    
+    x_pad = np.zeros((N,C,H+2*pad,W+2*pad))
+    for n in range(N):
+        for c in range(C):
+            x_pad[n,c] = np.pad(x[n,c],(1,1),'constant', constant_values=(0,0))
+            
+    for n in range(N):
+        for i in range(newH):
+            for j in range(newW):
+                for f in range(F):
+                    current_block = x_pad[n, :, i * stride : i * stride + HH, j * stride : j * stride + WW]
+                    new_val = np.sum(current_block * w[f])
+                    out[n, f, i, j] = new_val
+                out[n, :, i, j] += b
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+    cache = (x, w, b, conv_param)
+    return out, cache
 
 
 def conv_backward_naive(dout, cache):
-  """
-  A naive implementation of the backward pass for a convolutional layer.
+    """
+    A naive implementation of the backward pass for a convolutional layer.
 
-  Inputs:
-  - dout: Upstream derivatives.
-  - cache: A tuple of (x, w, b, conv_param) as in conv_forward_naive
+    Inputs:
+    - dout: Upstream derivatives.
+    - cache: A tuple of (x, w, b, conv_param) as in conv_forward_naive
 
-  Returns a tuple of:
-  - dx: Gradient with respect to x
-  - dw: Gradient with respect to w
-  - db: Gradient with respect to b
-  """
-  dx, dw, db = None, None, None
-  #############################################################################
-  # TODO: Implement the convolutional backward pass.                          #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
-  return dx, dw, db
+    Returns a tuple of:
+    - dx: Gradient with respect to x
+    - dw: Gradient with respect to w
+    - db: Gradient with respect to b
+    """
+    dx, dw, db = None, None, None
+    #############################################################################
+    # TODO: Implement the convolutional backward pass.                          #
+    #############################################################################
+    x, w, b, conv_param = cache
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    _, _, H_out, W_out = dout.shape
+    
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    
+    x_pad = np.zeros((N,C,H+2*pad,W+2*pad))
+    for n in range(N):
+        for c in range(C):
+            x_pad[n,c] = np.pad(x[n,c],(1,1),'constant', constant_values=(0,0))
+            
+    db = np.zeros(b.shape)
+    dw = np.zeros(w.shape)
+    dx_pad = np.zeros(x_pad.shape)
+    
+    for n in range(N):
+        for i in range(H_out):
+            for j in range(W_out):
+                db += dout[n, :, i, j]
+    
+    
+    for n in range(N):
+        for i in range(H_out):
+            for j in range(W_out):
+                for f in range(F):
+                    current_block = x_pad[n, :, i * stride : i*stride + HH, j * stride: j*stride + WW]
+                    dw[f] += current_block * dout[n, f, i, j]
+                    dx_pad[n, :, i * stride : i*stride + HH, j * stride: j*stride + WW] += w[f] * dout[n,f,i,j]
+                    
+    dx = dx_pad[:, :, pad:H+pad, pad:W+pad]
+                
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+    return dx, dw, db
 
 
 def max_pool_forward_naive(x, pool_param):
