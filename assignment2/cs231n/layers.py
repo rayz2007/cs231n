@@ -1,5 +1,6 @@
 import numpy as np
-
+from cs231n.fast_layers import *
+from cs231n.layer_utils import *
 
 def affine_forward(x, w, b):
     """
@@ -475,63 +476,89 @@ def conv_backward_naive(dout, cache):
 
 
 def max_pool_forward_naive(x, pool_param):
-  """
-  A naive implementation of the forward pass for a max pooling layer.
+    """
+    A naive implementation of the forward pass for a max pooling layer.
 
-  Inputs:
-  - x: Input data, of shape (N, C, H, W)
-  - pool_param: dictionary with the following keys:
+    Inputs:
+    - x: Input data, of shape (N, C, H, W)
+    - pool_param: dictionary with the following keys:
     - 'pool_height': The height of each pooling region
     - 'pool_width': The width of each pooling region
     - 'stride': The distance between adjacent pooling regions
 
-  Returns a tuple of:
-  - out: Output data
-  - cache: (x, pool_param)
-  """
-  out = None
-  #############################################################################
-  # TODO: Implement the max pooling forward pass                              #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
-  cache = (x, pool_param)
-  return out, cache
+    Returns a tuple of:
+    - out: Output data
+    - cache: (x, pool_param)
+    """
+    #############################################################################
+    # TODO: Implement the max pooling forward pass                              #
+    #############################################################################
+    N, C, H, W = x.shape
+    pool_h = pool_param['pool_height']
+    pool_w = pool_param['pool_width']
+    stride = pool_param['stride']
+    H_out = (H - pool_h) / stride + 1
+    W_out = (W - pool_w) / stride + 1
+    out = np.zeros((N, C, H_out, W_out))
+    for n in range(N):
+        for c in range(C):
+            for i in range(H_out):
+                for j in range(W_out):
+                    current_block = x[n, c, i*stride:i*stride+pool_h, j*stride:j*stride+pool_w]
+                    curr_max = np.max(current_block)
+                    out[n, c, i, j] = curr_max
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+    cache = (x, pool_param)
+    return out, cache
 
 
 def max_pool_backward_naive(dout, cache):
-  """
-  A naive implementation of the backward pass for a max pooling layer.
+    """
+    A naive implementation of the backward pass for a max pooling layer.
 
-  Inputs:
-  - dout: Upstream derivatives
-  - cache: A tuple of (x, pool_param) as in the forward pass.
+    Inputs:
+    - dout: Upstream derivatives
+    - cache: A tuple of (x, pool_param) as in the forward pass.
 
-  Returns:
-  - dx: Gradient with respect to x
-  """
-  dx = None
-  #############################################################################
-  # TODO: Implement the max pooling backward pass                             #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
-  return dx
+    Returns:
+    - dx: Gradient with respect to x
+    """
+    dx = None
+    #############################################################################
+    # TODO: Implement the max pooling backward pass                             #
+    #############################################################################
+    x, pool_param = cache
+    N,C,H,W = x.shape
+    dx = np.zeros(x.shape)
+    _,_, H_out, W_out = dout.shape
+    pool_h = pool_param['pool_height']
+    pool_w = pool_param['pool_width']
+    stride = pool_param['stride']
+    for n in range(N):
+        for c in range(C):
+            for i in range(H_out):
+                for j in range(W_out):
+                    current_block = x[n, c, i*stride:i*stride+pool_h, j*stride:j*stride+pool_w]
+                    curr_max = np.max(current_block)
+                    x_mask = current_block == curr_max
+                    dx[n, c, i*stride:i*stride+pool_h, j*stride:j*stride+pool_w] += dout[n, c, i, j] * x_mask
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+    return dx
 
 
 def spatial_batchnorm_forward(x, gamma, beta, bn_param):
-  """
-  Computes the forward pass for spatial batch normalization.
-  
-  Inputs:
-  - x: Input data of shape (N, C, H, W)
-  - gamma: Scale parameter, of shape (C,)
-  - beta: Shift parameter, of shape (C,)
-  - bn_param: Dictionary with the following keys:
+    """
+    Computes the forward pass for spatial batch normalization.
+
+    Inputs:
+    - x: Input data of shape (N, C, H, W)
+    - gamma: Scale parameter, of shape (C,)
+    - beta: Shift parameter, of shape (C,)
+    - bn_param: Dictionary with the following keys:
     - mode: 'train' or 'test'; required
     - eps: Constant for numeric stability
     - momentum: Constant for running mean / variance. momentum=0 means that
@@ -540,57 +567,65 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
       default of momentum=0.9 should work well in most situations.
     - running_mean: Array of shape (D,) giving running mean of features
     - running_var Array of shape (D,) giving running variance of features
-    
-  Returns a tuple of:
-  - out: Output data, of shape (N, C, H, W)
-  - cache: Values needed for the backward pass
-  """
-  out, cache = None, None
 
-  #############################################################################
-  # TODO: Implement the forward pass for spatial batch normalization.         #
-  #                                                                           #
-  # HINT: You can implement spatial batch normalization using the vanilla     #
-  # version of batch normalization defined above. Your implementation should  #
-  # be very short; ours is less than five lines.                              #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+    Returns a tuple of:
+    - out: Output data, of shape (N, C, H, W)
+    - cache: Values needed for the backward pass
+    """
+    out, cache = None, None
 
-  return out, cache
+    #############################################################################
+    # TODO: Implement the forward pass for spatial batch normalization.         #
+    #                                                                           #
+    # HINT: You can implement spatial batch normalization using the vanilla     #
+    # version of batch normalization defined above. Your implementation should  #
+    # be very short; ours is less than five lines.                              #
+    #############################################################################
+    N, C, H, W = x.shape
+    batch_forw, cache = batchnorm_forward(x.transpose(0,3,2,1).reshape((N*H*W), C), gamma, beta, bn_param)
+    out = batch_forw.reshape(N, W, H, C).transpose(0,3,2,1)
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+
+    return out, cache
 
 
 def spatial_batchnorm_backward(dout, cache):
-  """
-  Computes the backward pass for spatial batch normalization.
-  
-  Inputs:
-  - dout: Upstream derivatives, of shape (N, C, H, W)
-  - cache: Values from the forward pass
-  
-  Returns a tuple of:
-  - dx: Gradient with respect to inputs, of shape (N, C, H, W)
-  - dgamma: Gradient with respect to scale parameter, of shape (C,)
-  - dbeta: Gradient with respect to shift parameter, of shape (C,)
-  """
-  dx, dgamma, dbeta = None, None, None
+    """
+    Computes the backward pass for spatial batch normalization.
 
-  #############################################################################
-  # TODO: Implement the backward pass for spatial batch normalization.        #
-  #                                                                           #
-  # HINT: You can implement spatial batch normalization using the vanilla     #
-  # version of batch normalization defined above. Your implementation should  #
-  # be very short; ours is less than five lines.                              #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+    Inputs:
+    - dout: Upstream derivatives, of shape (N, C, H, W)
+    - cache: Values from the forward pass
 
-  return dx, dgamma, dbeta
+    Returns a tuple of:
+    - dx: Gradient with respect to inputs, of shape (N, C, H, W)
+    - dgamma: Gradient with respect to scale parameter, of shape (C,)
+    - dbeta: Gradient with respect to shift parameter, of shape (C,)
+    """
+    dx, dgamma, dbeta = None, None, None
+
+    #############################################################################
+    # TODO: Implement the backward pass for spatial batch normalization.        #
+    #                                                                           #
+    # HINT: You can implement spatial batch normalization using the vanilla     #
+    # version of batch normalization defined above. Your implementation should  #
+    # be very short; ours is less than five lines.                              #
+    #############################################################################
+    N, C, H, W = dout.shape
+    dx_temp, dgamma, dbeta = batchnorm_backward(dout.transpose(0,3,2,1).reshape((N*H*W), C), cache)
+    dx = dx_temp.reshape(N,W,H,C).transpose(0,3,2,1)
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+
+    return dx, dgamma, dbeta
   
+    
+def conv_norm_relu_forward(x, w, b, conv_param, gamma, beta, bn_param):
+    conv_out, conv_cache = con
+
 
 def svm_loss(x, y):
   """

@@ -4,6 +4,23 @@ from cs231n.layers import *
 from cs231n.fast_layers import *
 from cs231n.layer_utils import *
 
+class FirstConvNet(object):
+    """
+    A convolutional network with the following architecture:
+
+    [conv -bn- relu - 2x2 max pool] - affine - relu - affine - softmax
+
+    The network operates on minibatches of data that have shape (N, C, H, W)
+    consisting of N images, each with height H and width W and with C input
+    channels.
+    """
+    
+    def __init__(self, input_dim=(3, 32, 32), num_filters=32, filter_size=7, num_filters=[16,32], 
+                hidden_dims=[100,100], 
+                num_classes=10, use_batchnorm=False, weight_scale=1e-3, reg=0.0,
+                dtype=np.float32):
+
+
 
 class ThreeLayerConvNet(object):
   """
@@ -126,3 +143,6 @@ class ThreeLayerConvNet(object):
   
   
 pass
+
+
+
