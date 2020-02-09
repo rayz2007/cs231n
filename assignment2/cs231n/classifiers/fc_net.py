@@ -311,17 +311,3 @@ class FullyConnectedNet(object):
         return loss, grads
     
     
-def affine_bn_relu_forward(x,w,b, gamma, beta, bn_param):
-    a_out, a_cache = affine_forward(x,w,b)
-    bn_out, bn_cache = batchnorm_forward(a_out, gamma, beta, bn_param)
-    relu_out, relu_cache = relu_forward(bn_out)
-    cache = (a_cache, bn_cache, relu_cache)
-    return relu_out, cache
-
-def affine_bn_relu_backward(dout, cache):
-    a_cache, bn_cache, relu_cache = cache
-    drelu = relu_backward(dout, relu_cache)
-    d_bn, d_gamma, d_beta = batchnorm_backward(drelu, bn_cache)
-    dx, dw, db = affine_backward(d_bn, a_cache)
-    return dx, dw, db, d_gamma, d_beta
-
